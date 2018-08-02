@@ -301,9 +301,11 @@ public class SpeechService extends Service {
                     RecognizeRequest.newBuilder()
                             .setConfig(RecognitionConfig.newBuilder()
                                     .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16)
+                                    //.setEncoding(AudioEncoding.FLAC) TODO
                                     .setLanguageCode("en-US")
-                                    .setModel("video")
                                     .setSampleRateHertz(16000)
+                                    .setModel("video")
+                                    .setEnableAutomaticPunctuation(true)
                                     .build())
                             .setAudio(RecognitionAudio.newBuilder()
                                     .setContent(ByteString.readFrom(stream))

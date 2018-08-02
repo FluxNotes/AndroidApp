@@ -32,6 +32,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -51,6 +52,10 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 1;
 
     private SpeechService mSpeechService;
+
+    // Speech to Text Result Collection
+    private StringBuilder spToTxtResult;
+    private boolean collectSpToTxt;
 
     private VoiceRecorder mVoiceRecorder;
     private final VoiceRecorder.Callback mVoiceCallback = new VoiceRecorder.Callback() {
@@ -113,8 +118,8 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
 
         final Resources resources = getResources();
         final Resources.Theme theme = getTheme();
-        mColorHearing = ResourcesCompat.getColor(resources, R.color.status_hearing, theme);
-        mColorNotHearing = ResourcesCompat.getColor(resources, R.color.status_not_hearing, theme);
+        mColorHearing = ResourcesCompat.getColor(resources, R.color.startColor, theme);
+        mColorNotHearing = ResourcesCompat.getColor(resources, R.color.stopColor, theme);
 
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
         mStatus = (TextView) findViewById(R.id.status);
@@ -126,12 +131,18 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
                 savedInstanceState.getStringArrayList(STATE_RESULTS);
         mAdapter = new ResultAdapter(results);
         mRecyclerView.setAdapter(mAdapter);
+
+        collectSpToTxt = false;
+        spToTxtResult = new StringBuilder();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
 
+        // Flush Speech to Text Result storage
+        collectSpToTxt = false;
+        spToTxtResult.setLength(0);
         // Prepare Cloud Speech API
         bindService(new Intent(this, SpeechService.class), mServiceConnection, BIND_AUTO_CREATE);
 
@@ -152,7 +163,7 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
     protected void onStop() {
         // Stop listening to voice
         stopVoiceRecorder();
-
+        collectSpToTxt = false;
         // Stop Cloud Speech API
         mSpeechService.removeListener(mSpeechServiceListener);
         unbindService(mServiceConnection);
@@ -194,7 +205,27 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_file:
+                // Stop Collection
+                collectSpToTxt = false;
+                // Flush text Storage
+                spToTxtResult.setLength(0);
+                // Start Collection
+                collectSpToTxt = true;
                 mSpeechService.recognizeInputStream(getResources().openRawResource(R.raw.audio));
+                return true;
+            case R.id.action_start:
+                // Stop Collection
+                collectSpToTxt = false;
+                // Flush text Storage
+                spToTxtResult.setLength(0);
+                // Start Collection
+                collectSpToTxt = true;
+                return true;
+            case R.id.action_stop:
+                // Stop Collection
+                collectSpToTxt = false;
+                // Post Intent
+                Log.e("SPEECH", spToTxtResult.toString());
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -245,6 +276,8 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
                         mVoiceRecorder.dismiss();
                     }
                     if (mText != null && !TextUtils.isEmpty(text)) {
+                        if(collectSpToTxt)
+                            spToTxtResult.append(text);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {

@@ -37,9 +37,9 @@ public class VoiceRecorder {
     private static final int CHANNEL = AudioFormat.CHANNEL_IN_MONO;
     private static final int ENCODING = AudioFormat.ENCODING_PCM_16BIT;
 
-    private static final int AMPLITUDE_THRESHOLD = 1500;
-    private static final int SPEECH_TIMEOUT_MILLIS = 2000;
-    private static final int MAX_SPEECH_LENGTH_MILLIS = 30 * 1000;
+    private static final int AMPLITUDE_THRESHOLD = 500; // was 1500
+    private static final int SPEECH_TIMEOUT_MILLIS = 1000; // was 2000
+    private static final int MAX_SPEECH_LENGTH_MILLIS = 45 * 1000; // was 30 sec
 
     public static abstract class Callback {
 
