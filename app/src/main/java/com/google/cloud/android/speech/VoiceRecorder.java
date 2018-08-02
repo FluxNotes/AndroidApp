@@ -37,7 +37,7 @@ public class VoiceRecorder {
     private static final int CHANNEL = AudioFormat.CHANNEL_IN_MONO;
     private static final int ENCODING = AudioFormat.ENCODING_PCM_16BIT;
 
-    private static final int AMPLITUDE_THRESHOLD = 1000;
+    private static final int AMPLITUDE_THRESHOLD = 1500;
     private static final int SPEECH_TIMEOUT_MILLIS = 2000;
     private static final int MAX_SPEECH_LENGTH_MILLIS = 30 * 1000;
 
@@ -209,10 +209,7 @@ public class VoiceRecorder {
             mLastVoiceHeardMillis = Long.MAX_VALUE;
             mCallback.onVoiceEnd();
         }
-        /**
-         * THIS IS WHY THE AUDIO INPUT IS SOMETIMES CHOPPED. THIS LIMITS
-         * THE AUDIO INPUT STREAM BASED ON PEAK AMPLITUDE OF THE INCOMING SAMPLE.
-         **/
+
         private boolean isHearingVoice(byte[] buffer, int size) {
             for (int i = 0; i < size - 1; i += 2) {
                 // The buffer has LINEAR16 in little endian.

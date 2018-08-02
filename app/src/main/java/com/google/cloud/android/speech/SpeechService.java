@@ -32,41 +32,17 @@ import android.util.Log;
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
-/** gRPC streaming behavior, no model configuration interface... */
-import com.google.cloud.speech.v1.RecognitionAudio;
-import com.google.cloud.speech.v1.RecognitionConfig;
-import com.google.cloud.speech.v1.RecognizeRequest;
-import com.google.cloud.speech.v1.RecognizeResponse;
-import com.google.cloud.speech.v1.SpeechGrpc;
-import com.google.cloud.speech.v1.SpeechRecognitionAlternative;
-import com.google.cloud.speech.v1.SpeechRecognitionResult;
-import com.google.cloud.speech.v1.StreamingRecognitionConfig;
-import com.google.cloud.speech.v1.StreamingRecognitionResult;
-import com.google.cloud.speech.v1.StreamingRecognizeRequest;
-import com.google.cloud.speech.v1.StreamingRecognizeResponse;
-
-
-// Changed over to v1p1beta1 for access to additional configuration
-// methods within RecognitionConfig
-/*import com.google.cloud.speech.v1p1beta1.LongRunningRecognizeMetadata;
-import com.google.cloud.speech.v1p1beta1.LongRunningRecognizeResponse;
 import com.google.cloud.speech.v1p1beta1.RecognitionAudio;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig;
-import com.google.cloud.speech.v1p1beta1.RecognitionConfig.AudioEncoding;
-import com.google.cloud.speech.v1p1beta1.RecognitionMetadata;
-import com.google.cloud.speech.v1p1beta1.RecognitionMetadata.InteractionType;
-import com.google.cloud.speech.v1p1beta1.RecognitionMetadata.MicrophoneDistance;
-import com.google.cloud.speech.v1p1beta1.RecognitionMetadata.RecordingDeviceType;
+import com.google.cloud.speech.v1p1beta1.RecognizeRequest;
 import com.google.cloud.speech.v1p1beta1.RecognizeResponse;
-import com.google.cloud.speech.v1p1beta1.SpeechClient;
+import com.google.cloud.speech.v1p1beta1.SpeechGrpc;
 import com.google.cloud.speech.v1p1beta1.SpeechRecognitionAlternative;
 import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
 import com.google.cloud.speech.v1p1beta1.StreamingRecognitionConfig;
 import com.google.cloud.speech.v1p1beta1.StreamingRecognitionResult;
 import com.google.cloud.speech.v1p1beta1.StreamingRecognizeRequest;
 import com.google.cloud.speech.v1p1beta1.StreamingRecognizeResponse;
-import com.google.cloud.speech.v1p1beta1.WordInfo;*/
-
 import com.google.protobuf.ByteString;
 
 import java.io.IOException;
@@ -321,12 +297,12 @@ public class SpeechService extends Service {
      */
     public void recognizeInputStream(InputStream stream) {
         try {
-            // using gRPC to relay recognize request.
             mApi.recognize(
                     RecognizeRequest.newBuilder()
                             .setConfig(RecognitionConfig.newBuilder()
                                     .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16)
                                     .setLanguageCode("en-US")
+                                    .setModel("video")
                                     .setSampleRateHertz(16000)
                                     .build())
                             .setAudio(RecognitionAudio.newBuilder()

@@ -47,10 +47,8 @@
             android:text="@string/listening"
             android:textAppearance="@style/TextAppearance.AppCompat.Caption"
             android:textColor="@color/status_not_hearing"
-            android:textSize="14sp"
-            android:textStyle="bold"
             android:visibility="gone"
-            tools:visibility="visible" />
+            tools:visibility="visible"/>
 
         <TextView
             android:id="@+id/text"

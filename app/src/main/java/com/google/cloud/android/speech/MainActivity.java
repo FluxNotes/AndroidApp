@@ -34,7 +34,6 @@ import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -114,8 +113,8 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
 
         final Resources resources = getResources();
         final Resources.Theme theme = getTheme();
-        mColorHearing = ResourcesCompat.getColor(resources, R.color.startColor, theme);
-        mColorNotHearing = ResourcesCompat.getColor(resources, R.color.stopColor, theme);
+        mColorHearing = ResourcesCompat.getColor(resources, R.color.status_hearing, theme);
+        mColorNotHearing = ResourcesCompat.getColor(resources, R.color.status_not_hearing, theme);
 
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
         mStatus = (TextView) findViewById(R.id.status);
@@ -196,10 +195,6 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
         switch (item.getItemId()) {
             case R.id.action_file:
                 mSpeechService.recognizeInputStream(getResources().openRawResource(R.raw.audio));
-                return true;
-            case R.id.action_start:
-                return true;
-            case R.id.action_stop:
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -312,6 +307,5 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
         }
 
     }
-
 
 }
