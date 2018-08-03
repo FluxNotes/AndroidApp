@@ -225,6 +225,8 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
                 // Stop Collection
                 collectSpToTxt = false;
                 // Post Intent
+                //Intent nlpDataReady = new Intent();
+                // 
                 Log.e("SPEECH", spToTxtResult.toString());
                 return true;
             default:
@@ -276,7 +278,7 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
                         mVoiceRecorder.dismiss();
                     }
                     if (mText != null && !TextUtils.isEmpty(text)) {
-                        if(collectSpToTxt)
+                        if(collectSpToTxt && isFinal)
                             spToTxtResult.append(text);
                         runOnUiThread(new Runnable() {
                             @Override

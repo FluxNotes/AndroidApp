@@ -255,9 +255,11 @@ public class SpeechService extends Service {
                                 .setLanguageCode(getDefaultLanguageCode())
                                 .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16)
                                 .setSampleRateHertz(sampleRate)
+                                .setModel("video")
+                                .setEnableAutomaticPunctuation(true)
                                 .build())
                         .setInterimResults(true)
-                        .setSingleUtterance(true)
+                        .setSingleUtterance(false)
                         .build())
                 .build());
     }
