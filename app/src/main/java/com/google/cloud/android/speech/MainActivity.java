@@ -220,14 +220,18 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
                 spToTxtResult.setLength(0);
                 // Start Collection
                 collectSpToTxt = true;
+                Log.d("MAIN", "Start collection");
+                startVoiceRecorder();
                 return true;
             case R.id.action_stop:
                 // Stop Collection
                 collectSpToTxt = false;
                 // Post Intent
-                //Intent nlpDataReady = new Intent();
-                // 
-                Log.e("SPEECH", spToTxtResult.toString());
+                Log.i("SPEECH", spToTxtResult.toString());
+                Intent intent = new Intent("org.mitre.fluxnotes.NLP_REQUEST");
+                intent.putExtra("text", spToTxtResult.toString());
+                sendBroadcast(intent);
+
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -278,8 +282,10 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
                         mVoiceRecorder.dismiss();
                     }
                     if (mText != null && !TextUtils.isEmpty(text)) {
-                        if(collectSpToTxt && isFinal)
+                        if(collectSpToTxt && isFinal) {
                             spToTxtResult.append(text);
+                            Log.i("TAG", spToTxtResult.toString());
+                        }
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
