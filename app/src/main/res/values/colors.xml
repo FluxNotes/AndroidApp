@@ -23,4 +23,11 @@
     <color name="status_not_hearing">#757575</color>
     <color name="startColor">#5bbd22</color>
     <color name="stopColor">#e33434</color>
+
+    <color name="TextDark">#232323</color>
+    <color name="TextMedium">#4f4f4f</color>
+    <color name="TextGray">#767676</color>
+    <color name="ButtonRed">#d33c3c</color>
+    <color name="HeaderGray">#dddddd</color>
+    <color name="CellGray">#f9f9f9</color>
 </resources>

@@ -36,6 +36,7 @@ import com.google.cloud.speech.v1p1beta1.RecognitionAudio;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig;
 import com.google.cloud.speech.v1p1beta1.RecognizeRequest;
 import com.google.cloud.speech.v1p1beta1.RecognizeResponse;
+import com.google.cloud.speech.v1p1beta1.SpeechContext;
 import com.google.cloud.speech.v1p1beta1.SpeechGrpc;
 import com.google.cloud.speech.v1p1beta1.SpeechRecognitionAlternative;
 import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
@@ -86,7 +87,7 @@ public class SpeechService extends Service {
 
     }
 
-    private static final String TAG = "SpeechService";
+    private static final String TAG = "SPEECH";
 
     private static final String PREFS = "SpeechService";
     private static final String PREF_ACCESS_TOKEN_VALUE = "access_token_value";
@@ -136,7 +137,7 @@ public class SpeechService extends Service {
 
         @Override
         public void onCompleted() {
-            Log.i(TAG, "API completed.");
+            /*Log.i(TAG, "API completed.");*/
         }
 
     };
@@ -299,6 +300,40 @@ public class SpeechService extends Service {
      */
     public void recognizeInputStream(InputStream stream) {
         try {
+            // Add hint words
+            SpeechContext context= SpeechContext.newBuilder()
+                    .addPhrases("ok-flux-notes")
+                    .addPhrases("flux-notes")
+                    .addPhrases("toxicities")
+                    .addPhrases("toxicity")
+                    .addPhrases("taxol")
+                    .addPhrases("axilia")
+                    .addPhrases("paclitaxel")
+                    .addPhrases("continue-the-regimen")
+                    .addPhrases("side effect")
+                    .addPhrases("side effects")
+                    .addPhrases("adverse events")
+                    .addPhrases("disease")
+                    .addPhrases("cancer")
+                    .addPhrases("status")
+                    .addPhrases("tumor")
+                    .addPhrases("numbness")
+                    .addPhrases("tingling")
+                    .addPhrases("peripheral sensory neuropathy")
+                    .addPhrases("myalgia")
+                    .addPhrases("muscle weakness")
+                    .addPhrases("muscle pain")
+                    .addPhrases("stable")
+                    .addPhrases("progressing")
+                    .addPhrases("unchanged")
+                    .addPhrases("regressing")
+                    .addPhrases("worse")
+                    .addPhrases("worsening")
+                    .addPhrases("improving")
+                    .addPhrases("better")
+                    .addPhrases("same")
+                    .build();
+
             mApi.recognize(
                     RecognizeRequest.newBuilder()
                             .setConfig(RecognitionConfig.newBuilder()
@@ -308,6 +343,7 @@ public class SpeechService extends Service {
                                     .setSampleRateHertz(16000)
                                     .setModel("video")
                                     .setEnableAutomaticPunctuation(true)
+                                    .addSpeechContexts(context)
                                     .build())
                             .setAudio(RecognitionAudio.newBuilder()
                                     .setContent(ByteString.readFrom(stream))

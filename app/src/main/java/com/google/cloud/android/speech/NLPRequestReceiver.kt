@@ -10,7 +10,7 @@ import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 
-const val IP = "10.7.10.145"
+const val IP = "10.7.10.251"
 const val URL = "http://${IP}:3000/watson"
 const val EXTRA_MESSAGE = "org.mitre.fluxnotes.NLP_REQUEST"
 const val BOUNDARY = "BHH2P347U89HFSDOIFJQP2"
@@ -20,14 +20,14 @@ class NLPRequestReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         // This method is called when the BroadcastReceiver is receiving an Intent broadcast.
-        Log.i("NLPRequestReceiver", "Received Intent")
+        Log.d("NLPRequestReceiver", "NLPRequestReceiver:Received Intent")
         val text = intent.getStringExtra("text")
         val queue = Volley.newRequestQueue(context)
 
         val request = object : StringRequest(Request.Method.POST, URL,
                 Response.Listener<String> { response ->
-                    Log.i("NLPRequestReceiver", "SUCCESS")
-                    Log.i("NLPRequestReceiver", response)
+                    Log.d("SPEECH", "NLPRequestReceiver:SUCCESS")
+                    Log.d("SPEECH", "NLPRequestReceiver: " + response)
 
                     val intent = Intent(context, DisplayResultsActivity::class.java).apply {
                         putExtra("RESULT", response)
@@ -38,7 +38,7 @@ class NLPRequestReceiver : BroadcastReceiver() {
 
                 },
                 Response.ErrorListener { error ->
-                    Log.e("NLPRequestReceiver", error.toString())
+                    Log.d("SPEECH", "NLPRequestReceiver: " + error.toString())
                 }
         ) {
 
@@ -65,8 +65,8 @@ class NLPRequestReceiver : BroadcastReceiver() {
                 return headers
             }
         }
-        Log.i("MAIN", request.headers.toString())
-        Log.i("MAIN", String(request.body))
+        Log.d("SPEECH", request.headers.toString())
+        Log.d("SPEECH", String(request.body))
         queue.add(request)
     }
 }

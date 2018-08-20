@@ -22,6 +22,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
@@ -38,6 +39,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -54,8 +57,11 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
     private SpeechService mSpeechService;
 
     // Speech to Text Result Collection
+    public enum SessionState {BEGIN, END, PROCESS};
+    private SessionState currentSessionState;
     private StringBuilder spToTxtResult;
     private boolean collectSpToTxt;
+
 
     private VoiceRecorder mVoiceRecorder;
     private final VoiceRecorder.Callback mVoiceCallback = new VoiceRecorder.Callback() {
@@ -90,10 +96,12 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
     private int mColorNotHearing;
 
     // View references
-    private TextView mStatus;
-    private TextView mText;
-    private ResultAdapter mAdapter;
-    private RecyclerView mRecyclerView;
+    private ImageView mStatusImage;
+    private TextView mStatusText;
+    private Button mButtonImage;
+    private TextView mButtonText;
+
+    //private RecyclerView mRecyclerView;
 
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
@@ -101,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
         public void onServiceConnected(ComponentName componentName, IBinder binder) {
             mSpeechService = SpeechService.from(binder);
             mSpeechService.addListener(mSpeechServiceListener);
-            mStatus.setVisibility(View.VISIBLE);
+            //mStatus.setVisibility(View.VISIBLE);
         }
 
         @Override
@@ -114,24 +122,23 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.fluxnote2spch_main);
 
         final Resources resources = getResources();
         final Resources.Theme theme = getTheme();
         mColorHearing = ResourcesCompat.getColor(resources, R.color.startColor, theme);
         mColorNotHearing = ResourcesCompat.getColor(resources, R.color.stopColor, theme);
 
-        setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-        mStatus = (TextView) findViewById(R.id.status);
-        mText = (TextView) findViewById(R.id.text);
+        //setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
+        mStatusText = (TextView) findViewById(R.id.statusText);
+        mStatusImage = (ImageView) findViewById(R.id.statusImage);
+        mButtonText = (TextView) findViewById(R.id.buttonText);
+        mButtonImage = (Button) findViewById(R.id.buttonImage);
 
-        mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
-        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        final ArrayList<String> results = savedInstanceState == null ? null :
-                savedInstanceState.getStringArrayList(STATE_RESULTS);
-        mAdapter = new ResultAdapter(results);
-        mRecyclerView.setAdapter(mAdapter);
+        //final ArrayList<String> results = savedInstanceState == null ? null :
+        //        savedInstanceState.getStringArrayList(STATE_RESULTS);
 
+        currentSessionState = SessionState.BEGIN;
         collectSpToTxt = false;
         spToTxtResult = new StringBuilder();
     }
@@ -143,6 +150,19 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
         // Flush Speech to Text Result storage
         collectSpToTxt = false;
         spToTxtResult.setLength(0);
+        //Set Status Image
+        mStatusImage.setImageResource(0);
+        //Set Status Text
+        mStatusText.setText("");
+        //Set Button Color
+        mButtonImage.setBackground(getDrawable(R.drawable.beginbutton));
+        //Set Button Text
+        mButtonText.setText("Begin Encounter");
+        //Set initial session state
+        currentSessionState = SessionState.BEGIN;
+
+
+
         // Prepare Cloud Speech API
         bindService(new Intent(this, SpeechService.class), mServiceConnection, BIND_AUTO_CREATE);
 
@@ -175,9 +195,6 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        if (mAdapter != null) {
-            outState.putStringArrayList(STATE_RESULTS, mAdapter.getResults());
-        }
     }
 
     @Override
@@ -195,46 +212,52 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_file:
+    public void buttonOnClick(View v){
+        Button button = (Button) v;
+        switch (currentSessionState)
+        {
+            case BEGIN:
+                //Set Status Text
+                mStatusText.setText("Recording...");
+                //Set Button Shape
+                mButtonImage.setBackground(getDrawable(R.drawable.endbutton));
+                //Set Button Text
+                mButtonText.setText("End Encounter");
+                //Set Status Image
+                mStatusImage.setImageResource(R.mipmap.sound_wave);
                 // Stop Collection
                 collectSpToTxt = false;
                 // Flush text Storage
                 spToTxtResult.setLength(0);
                 // Start Collection
                 collectSpToTxt = true;
-                mSpeechService.recognizeInputStream(getResources().openRawResource(R.raw.audio));
-                return true;
-            case R.id.action_start:
-                // Stop Collection
-                collectSpToTxt = false;
-                // Flush text Storage
-                spToTxtResult.setLength(0);
-                // Start Collection
-                collectSpToTxt = true;
-                Log.d("MAIN", "Start collection");
+                Log.d("SPEECH", "Start collection");
                 startVoiceRecorder();
-                return true;
-            case R.id.action_stop:
+                currentSessionState = SessionState.END;
+                break;
+            case END:
+                //Set Status Image
+                mStatusImage.setImageResource(R.mipmap.cloud);
+                //Set Status Text
+                mStatusText.setText("Processing...");
+                //Set Button Color
+                mButtonImage.setBackgroundColor(getResources().getColor(R.color.TextGray));
+                //Set Button Text
+                mButtonText.setText("");
                 // Stop Collection
                 collectSpToTxt = false;
                 // Post Intent
-                Log.i("SPEECH", spToTxtResult.toString());
+                Log.d("SPEECH", "Stop collection");
+                Log.d("SPEECH", spToTxtResult.toString());
                 Intent intent = new Intent("org.mitre.fluxnotes.NLP_REQUEST");
                 intent.putExtra("text", spToTxtResult.toString());
                 sendBroadcast(intent);
-
-                return true;
+                currentSessionState = SessionState.PROCESS;
+                break;
+            case PROCESS:
             default:
-                return super.onOptionsItemSelected(item);
+                break;
+
         }
     }
 
@@ -263,7 +286,7 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mStatus.setTextColor(hearingVoice ? mColorHearing : mColorNotHearing);
+                Log.d("SPEECH", "Hearing Voice:" + (hearingVoice ? "Yes":"No"));
             }
         });
     }
@@ -273,80 +296,32 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO},
                 REQUEST_RECORD_AUDIO_PERMISSION);
     }
-
+    static int count=0;
     private final SpeechService.Listener mSpeechServiceListener =
             new SpeechService.Listener() {
                 @Override
                 public void onSpeechRecognized(final String text, final boolean isFinal) {
+
                     if (isFinal) {
                         mVoiceRecorder.dismiss();
                     }
-                    if (mText != null && !TextUtils.isEmpty(text)) {
+                    if (!TextUtils.isEmpty(text)) {
                         if(collectSpToTxt && isFinal) {
                             spToTxtResult.append(text);
-                            Log.i("TAG", spToTxtResult.toString());
+                            Log.d("SPEECH", spToTxtResult.toString());
                         }
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 if (isFinal) {
-                                    mText.setText(null);
-                                    mAdapter.addResult(text);
-                                    mRecyclerView.smoothScrollToPosition(0);
+                                    Log.d("SPEECH", text);
+                                    count=0;
                                 } else {
-                                    mText.setText(text);
+                                    Log.d("SPEECH","Block Processed" + ++count);
                                 }
                             }
                         });
                     }
                 }
             };
-
-    private static class ViewHolder extends RecyclerView.ViewHolder {
-
-        TextView text;
-
-        ViewHolder(LayoutInflater inflater, ViewGroup parent) {
-            super(inflater.inflate(R.layout.item_result, parent, false));
-            text = (TextView) itemView.findViewById(R.id.text);
-        }
-
-    }
-
-    private static class ResultAdapter extends RecyclerView.Adapter<ViewHolder> {
-
-        private final ArrayList<String> mResults = new ArrayList<>();
-
-        ResultAdapter(ArrayList<String> results) {
-            if (results != null) {
-                mResults.addAll(results);
-            }
-        }
-
-        @Override
-        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            return new ViewHolder(LayoutInflater.from(parent.getContext()), parent);
-        }
-
-        @Override
-        public void onBindViewHolder(ViewHolder holder, int position) {
-            holder.text.setText(mResults.get(position));
-        }
-
-        @Override
-        public int getItemCount() {
-            return mResults.size();
-        }
-
-        void addResult(String result) {
-            mResults.add(0, result);
-            notifyItemInserted(0);
-        }
-
-        public ArrayList<String> getResults() {
-            return mResults;
-        }
-
-    }
-
 }

@@ -38,8 +38,8 @@ public class VoiceRecorder {
     private static final int ENCODING = AudioFormat.ENCODING_PCM_16BIT;
 
     private static final int AMPLITUDE_THRESHOLD = 500; // was 1500
-    private static final int SPEECH_TIMEOUT_MILLIS = (1 * 2 * 1000); // was 2 sec
-    private static final int MAX_SPEECH_LENGTH_MILLIS = (15 * 60 * 1000); // was 30 sec
+    private static final int SPEECH_TIMEOUT_MILLIS = (1 * 1 * 1000); // was 2 sec
+    private static final int MAX_SPEECH_LENGTH_MILLIS = (1 * 10 * 1000); // was 30 sec
 
     public static abstract class Callback {
 
