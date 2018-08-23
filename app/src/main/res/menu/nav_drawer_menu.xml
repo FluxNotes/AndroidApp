@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <!--<item
+            android:id="@+id/nav_flux_notes_webview"
+            android:title="@string/app_name"
+            android:icon="@drawable/ic_logo"/>-->
+        <item
+            android:id="@+id/nav_record_encounter"
+            android:title="@string/menu_sample_encounter_title"
+            android:icon="@android:drawable/ic_btn_speak_now"/>
+    </group>
+</menu>
