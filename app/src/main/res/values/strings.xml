@@ -16,8 +16,7 @@
 <resources>
     <string name="app_name">Flux Notes On Voice</string>
     <string name="permission_message">This app needs to record audio and recognize your speech.</string>
-    <string name="listening">Listening…</string>
-    <string name="load_file">Load Audio</string>
-    <string name="startCollection">Collect Audio</string>
-    <string name="stopCollection">Process Audio</string>
+    <string name="session_capture_on">Session Capture ON </string>
+    <string name="session_capture_off">Session Capture OFF</string>
+    <string name="audio_playback">Playback Audio</string>
 </resources>

@@ -19,15 +19,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:id="@+id/action_file"
-        android:title="@string/load_file"
+        android:id="@+id/sessionCapture_Off"
+        android:title="@string/session_capture_off"
         app:showAsAction="never"/>
     <item
-        android:id="@+id/action_start"
-        android:title="@string/startCollection"
+        android:id="@+id/sessionCapture_On"
+        android:title="@string/session_capture_on"
         app:showAsAction="never"/>
     <item
-        android:id="@+id/action_stop"
-        android:title="@string/stopCollection"
+        android:id="@+id/audioPlayback"
+        android:title="@string/audio_playback"
         app:showAsAction="never"/>
 </menu>

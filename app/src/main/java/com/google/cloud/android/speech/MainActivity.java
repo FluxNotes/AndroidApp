@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
     private SessionState currentSessionState;
     private StringBuilder spToTxtResult;
     private boolean collectSpToTxt;
+    private SessionCapture sessionCapture;
 
 
     private VoiceRecorder mVoiceRecorder;
@@ -68,7 +69,7 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
 
         @Override
         public void onVoiceStart() {
-            showStatus(true);
+            //showStatus(true);
             if (mSpeechService != null) {
                 mSpeechService.startRecognizing(mVoiceRecorder.getSampleRate());
             }
@@ -83,12 +84,18 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
 
         @Override
         public void onVoiceEnd() {
-            showStatus(false);
+            //showStatus(false);
             if (mSpeechService != null) {
                 mSpeechService.finishRecognizing();
             }
         }
 
+        @Override
+        public void onVoiceCapture(byte[] data, int size, int sampleRate){
+            if(sessionCapture != null){
+                sessionCapture.captureAudioSample(data, size, sampleRate);
+            }
+        }
     };
 
     // Resource caches
@@ -140,8 +147,35 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
 
         currentSessionState = SessionState.BEGIN;
         collectSpToTxt = false;
+        sessionCapture = new SessionCapture(this, this);
         spToTxtResult = new StringBuilder();
     }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.sessionCapture_Off:
+                if(sessionCapture != null){
+                    sessionCapture.setEnableCapture(false);}
+                return true;
+            case R.id.sessionCapture_On:
+                if(sessionCapture != null){
+                    sessionCapture.setEnableCapture(true);
+                }
+                return true;
+            case R.id.audioPlayback:
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
 
     @Override
     protected void onStart() {
@@ -150,6 +184,7 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
         // Flush Speech to Text Result storage
         collectSpToTxt = false;
         spToTxtResult.setLength(0);
+        
         //Set Status Image
         mStatusImage.setImageResource(0);
         //Set Status Text
@@ -217,6 +252,8 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
         switch (currentSessionState)
         {
             case BEGIN:
+                sessionCapture.setEnableCapture(true);
+                sessionCapture.startCapture();
                 //Set Status Text
                 mStatusText.setText("Recording...");
                 //Set Button Shape
@@ -253,6 +290,8 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
                 intent.putExtra("text", spToTxtResult.toString());
                 sendBroadcast(intent);
                 currentSessionState = SessionState.PROCESS;
+                sessionCapture.stopCapture();
+                sessionCapture.setEnableCapture(false);
                 break;
             case PROCESS:
             default:
@@ -308,16 +347,16 @@ public class MainActivity extends AppCompatActivity implements MessageDialogFrag
                     if (!TextUtils.isEmpty(text)) {
                         if(collectSpToTxt && isFinal) {
                             spToTxtResult.append(text);
-                            Log.d("SPEECH", spToTxtResult.toString());
+                            sessionCapture.captureStoTSample(text);
                         }
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 if (isFinal) {
-                                    Log.d("SPEECH", text);
+                                    //Log.d("SPEECH", text);
                                     count=0;
                                 } else {
-                                    Log.d("SPEECH","Block Processed" + ++count);
+                                    //Log.d("SPEECH","Block Processed" + ++count);
                                 }
                             }
                         });
