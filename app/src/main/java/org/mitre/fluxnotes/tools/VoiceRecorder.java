@@ -63,6 +63,13 @@ public class VoiceRecorder {
          */
         public void onVoiceEnd() {
         }
+
+        /**
+         * Called when an audio sample is ready for capture.
+         */
+        public void onVoiceCapture(byte[] data, int size, int sample_rate){
+        }
+
     }
 
     private final Callback mCallback;
@@ -185,6 +192,7 @@ public class VoiceRecorder {
                     }
                     final int size = mAudioRecord.read(mBuffer, 0, mBuffer.length);
                     final long now = System.currentTimeMillis();
+                    mCallback.onVoiceCapture(mBuffer, mBuffer.length, getSampleRate());
                     if (isHearingVoice(mBuffer, size)) {
                         if (mLastVoiceHeardMillis == Long.MAX_VALUE) {
                             mVoiceStartedMillis = now;

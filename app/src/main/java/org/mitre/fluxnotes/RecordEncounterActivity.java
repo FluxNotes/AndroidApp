@@ -5,12 +5,10 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -22,30 +20,29 @@ import android.widget.TextView;
 import org.mitre.fluxnotes.fragments.MessageDialogFragment;
 import org.mitre.fluxnotes.services.SpeechService;
 import org.mitre.fluxnotes.tools.VoiceRecorder;
+import org.mitre.fluxnotes.tools.SessionCapture;
 
 public class RecordEncounterActivity extends AppCompatActivity implements MessageDialogFragment.Listener {
 
     private static final String FRAGMENT_MESSAGE_DIALOG = "message_dialog";
-
-    private static final String STATE_RESULTS = "results";
 
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 1;
 
     private SpeechService mSpeechService;
 
     // Speech to Text Result Collection
-    public enum SessionState {BEGIN, END, PROCESS};
+    public enum SessionState {BEGIN, END, PROCESS}
     private SessionState currentSessionState;
     private StringBuilder spToTxtResult;
     private boolean collectSpToTxt;
-
+    private SessionCapture sessionCapture;
 
     private VoiceRecorder mVoiceRecorder;
     private final VoiceRecorder.Callback mVoiceCallback = new VoiceRecorder.Callback() {
 
         @Override
         public void onVoiceStart() {
-            showStatus(true);
+            //showStatus(true);
             if (mSpeechService != null) {
                 mSpeechService.startRecognizing(mVoiceRecorder.getSampleRate());
             }
@@ -60,17 +57,20 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
 
         @Override
         public void onVoiceEnd() {
-            showStatus(false);
+            //showStatus(false);
             if (mSpeechService != null) {
                 mSpeechService.finishRecognizing();
             }
         }
 
-    };
+        @Override
+        public void onVoiceCapture(byte[] data, int size, int sampleRate){
+            if(sessionCapture != null){
+                sessionCapture.captureAudioSample(data, size, sampleRate);
+            }
+        }
 
-    // Resource caches
-    private int mColorHearing;
-    private int mColorNotHearing;
+    };
 
     // View references
     private ImageView mStatusImage;
@@ -78,15 +78,12 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
     private Button mButtonImage;
     private TextView mButtonText;
 
-    //private RecyclerView mRecyclerView;
-
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder binder) {
             mSpeechService = SpeechService.from(binder);
             mSpeechService.addListener(mSpeechServiceListener);
-            //mStatus.setVisibility(View.VISIBLE);
         }
 
         @Override
@@ -101,24 +98,44 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_record_encounter);
 
-        final Resources resources = getResources();
-        final Resources.Theme theme = getTheme();
-        mColorHearing = ResourcesCompat.getColor(resources, R.color.startColor, theme);
-        mColorNotHearing = ResourcesCompat.getColor(resources, R.color.stopColor, theme);
-
-        //setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-        mStatusText = (TextView) findViewById(R.id.statusText);
-        mStatusImage = (ImageView) findViewById(R.id.statusImage);
-        mButtonText = (TextView) findViewById(R.id.buttonText);
-        mButtonImage = (Button) findViewById(R.id.buttonImage);
-
-        //final ArrayList<String> results = savedInstanceState == null ? null :
-        //        savedInstanceState.getStringArrayList(STATE_RESULTS);
+        mStatusText = findViewById(R.id.statusText);
+        mStatusImage = findViewById(R.id.statusImage);
+        mButtonText = findViewById(R.id.buttonText);
+        mButtonImage = findViewById(R.id.buttonImage);
 
         currentSessionState = SessionState.BEGIN;
         collectSpToTxt = false;
         spToTxtResult = new StringBuilder();
+        sessionCapture = new SessionCapture(this, this);
     }
+
+    // TODO: Need some way to enable and disable session capture from the UI?
+    /*
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.sessionCapture_Off:
+                if(sessionCapture != null){
+                    sessionCapture.setEnableCapture(false);}
+                return true;
+            case R.id.sessionCapture_On:
+                if(sessionCapture != null){
+                    sessionCapture.setEnableCapture(true);
+                }
+                return true;
+            case R.id.audioPlayback:
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+    */
 
     @Override
     protected void onStart() {
@@ -134,7 +151,7 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
         //Set Button Color
         mButtonImage.setBackground(getDrawable(R.drawable.beginbutton));
         //Set Button Text
-        mButtonText.setText("Begin Encounter");
+        mButtonText.setText(getResources().getString(R.string.begin_encounter));
         //Set initial session state
         currentSessionState = SessionState.BEGIN;
 
@@ -196,12 +213,14 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
         switch (currentSessionState)
         {
             case BEGIN:
+                // If capturing is enabled then start doing so.
+                sessionCapture.startCapture();
                 //Set Status Text
                 mStatusText.setText("Recording...");
                 //Set Button Shape
                 mButtonImage.setBackground(getDrawable(R.drawable.endbutton));
                 //Set Button Text
-                mButtonText.setText("End Encounter");
+                mButtonText.setText(getResources().getString(R.string.end_encounter));
                 //Set Status Image
                 mStatusImage.setImageResource(R.mipmap.sound_wave);
                 // Stop Collection
@@ -231,11 +250,10 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
                 Log.d("SPEECH", spToTxtResult.toString());
                 Intent intent = new Intent("org.mitre.fluxnotes.NLP_REQUEST");
                 intent.putExtra("text", spToTxtResult.toString());
-                startActivity(intent);
-                // sendBroadcast(intent);
+                //startActivity(intent);
+                sendBroadcast(intent);
                 currentSessionState = SessionState.PROCESS;
                 break;
-            case PROCESS:
                 /*
             case R.id.action_sample:
                 intent = new Intent("org.mitre.fluxnotes.NLP_REQUEST");
@@ -248,6 +266,31 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
                 break;
 
         }
+    }
+
+    private void processingComplete(String NLP_response){
+        // Display NLP response.
+        Intent intent = new Intent(this, DisplayResultsActivity.class);
+        intent.putExtra("text", NLP_response);
+        startActivity(intent);
+
+        // Capture the NLP result.
+        sessionCapture.captureNlpSample(NLP_response);
+
+        /* Update display for next session... */
+        //Set Status Image
+        mStatusImage.setImageResource(0);
+        //Set Status Text
+        mStatusText.setText("");
+        //Set Button Color
+        mButtonImage.setBackground(getDrawable(R.drawable.beginbutton));
+        //Set Button Text
+        mButtonText.setText(getResources().getString(R.string.begin_encounter));
+        //Set initial session state
+        currentSessionState = SessionState.BEGIN;
+
+        // Processing is complete end session capture.
+        sessionCapture.stopCapture();
     }
 
     private void startVoiceRecorder() {
@@ -297,16 +340,16 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
                     if (!TextUtils.isEmpty(text)) {
                         if(collectSpToTxt && isFinal) {
                             spToTxtResult.append(text);
-                            Log.d("SPEECH", spToTxtResult.toString());
+                            sessionCapture.captureStoTSample(text);
                         }
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 if (isFinal) {
-                                    Log.d("SPEECH", text);
+                                    //Log.d("SPEECH", text);
                                     count=0;
                                 } else {
-                                    Log.d("SPEECH","Block Processed" + ++count);
+                                    //Log.d("SPEECH","Block Processed" + ++count);
                                 }
                             }
                         });

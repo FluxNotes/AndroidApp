@@ -3,4 +3,6 @@
     <string name="menu_sample_encounter_title">Record Sample Encounter</string>
 
     <string name="permission_message">This app needs to record audio and recognize your speech.</string>
+    <string name="begin_encounter">Begin Encounter</string>
+    <string name="end_encounter">End Encounter</string>
 </resources>
