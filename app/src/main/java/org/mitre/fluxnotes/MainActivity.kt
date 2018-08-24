@@ -58,6 +58,10 @@ class MainActivity : AppCompatActivity() {
                     val intent = Intent(this, RecordEncounterActivity::class.java)
                     startActivity(intent)
                 }
+                R.id.nav_display_sample -> {
+                    val intent = Intent(this, DisplayResultsActivity::class.java)
+                    startActivity(intent)
+                }
             }
 
             menuItem.isChecked = true

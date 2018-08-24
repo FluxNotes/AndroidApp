@@ -231,7 +231,8 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
                 Log.d("SPEECH", spToTxtResult.toString());
                 Intent intent = new Intent("org.mitre.fluxnotes.NLP_REQUEST");
                 intent.putExtra("text", spToTxtResult.toString());
-                sendBroadcast(intent);
+                startActivity(intent);
+                // sendBroadcast(intent);
                 currentSessionState = SessionState.PROCESS;
                 break;
             case PROCESS:

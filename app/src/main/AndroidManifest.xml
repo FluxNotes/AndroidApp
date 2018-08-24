@@ -22,6 +22,9 @@
             android:name=".RecordEncounterActivity"
             android:parentActivityName=".MainActivity" />
 
+        <activity android:name=".DisplayResultsActivity"
+            android:parentActivityName=".MainActivity" />
+
         <receiver
             android:name=".receivers.NLPRequestReceiver"
             android:enabled="true">
