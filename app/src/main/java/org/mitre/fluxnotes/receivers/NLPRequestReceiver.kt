@@ -8,6 +8,7 @@ import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
+import org.mitre.fluxnotes.DisplayResultsActivity
 
 const val IP = "10.7.9.168"
 const val URL = "http://${IP}:3000/watson"
@@ -28,14 +29,12 @@ class NLPRequestReceiver : BroadcastReceiver() {
                     Log.d("SPEECH", "NLPRequestReceiver:SUCCESS")
                     Log.d("SPEECH", "NLPRequestReceiver: " + response)
 
-                    /*
                     val intent = Intent(context, DisplayResultsActivity::class.java).apply {
                         putExtra("RESULT", response)
                         setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     //startActivity(intent)
                     context.startActivity(intent)
-                    */
 
                 },
                 Response.ErrorListener { error ->

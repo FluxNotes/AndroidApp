@@ -18,8 +18,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".RecordEncounterActivity"
-            android:parentActivityName=".MainActivity"/>
+        <activity
+            android:name=".RecordEncounterActivity"
+            android:parentActivityName=".MainActivity" />
 
         <receiver
             android:name=".receivers.NLPRequestReceiver"
@@ -29,7 +30,12 @@
             </intent-filter>
         </receiver>
 
-        <service android:name=".services.SpeechService" />
+        <service
+            android:name=".services.SpeechService"
+            android:enabled="true" />
+        <service
+            android:name=".services.NLPService"
+            android:enabled="true" />
     </application>
 
 </manifest>
