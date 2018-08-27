@@ -18,17 +18,20 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.mitre.fluxnotes.fragments.MessageDialogFragment;
+import org.mitre.fluxnotes.services.NLPService;
 import org.mitre.fluxnotes.services.SpeechService;
 import org.mitre.fluxnotes.tools.VoiceRecorder;
 import org.mitre.fluxnotes.tools.SessionCapture;
 
-public class RecordEncounterActivity extends AppCompatActivity implements MessageDialogFragment.Listener {
+public class RecordEncounterActivity extends AppCompatActivity implements MessageDialogFragment.Listener, NLPService.ResponseListener {
 
     private static final String FRAGMENT_MESSAGE_DIALOG = "message_dialog";
 
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 1;
 
     private SpeechService mSpeechService;
+
+    private NLPService mNLPService;
 
     // Speech to Text Result Collection
     public enum SessionState {BEGIN, END, PROCESS}
@@ -78,7 +81,7 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
     private Button mButtonImage;
     private TextView mButtonText;
 
-    private final ServiceConnection mServiceConnection = new ServiceConnection() {
+    private final ServiceConnection mSpeechServiceConnection = new ServiceConnection() {
 
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder binder) {
@@ -88,9 +91,22 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
+            mSpeechService.removeListener(mSpeechServiceListener);
             mSpeechService = null;
         }
 
+    };
+
+    private final ServiceConnection mNLPServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder binder) {
+            mNLPService = NLPService.Companion.from(binder);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mNLPService = null;
+        }
     };
 
     @Override
@@ -158,7 +174,9 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
 
 
         // Prepare Cloud Speech API
-        bindService(new Intent(this, SpeechService.class), mServiceConnection, BIND_AUTO_CREATE);
+        bindService(new Intent(this, SpeechService.class), mSpeechServiceConnection, BIND_AUTO_CREATE);
+
+        bindService(new Intent(this, NLPService.class), mNLPServiceConnection, BIND_AUTO_CREATE);
 
         // Start listening to voices
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
@@ -179,11 +197,8 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
         stopVoiceRecorder();
         collectSpToTxt = false;
         // Stop Cloud Speech API
-        if (mSpeechService != null) {
-            mSpeechService.removeListener(mSpeechServiceListener);
-        }
-        unbindService(mServiceConnection);
-        mSpeechService = null;
+        unbindService(mSpeechServiceConnection);
+        unbindService(mNLPServiceConnection);
 
         super.onStop();
     }
@@ -248,10 +263,11 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
                 // Post Intent
                 Log.d("SPEECH", "Stop collection");
                 Log.d("SPEECH", spToTxtResult.toString());
-                Intent intent = new Intent("org.mitre.fluxnotes.NLP_REQUEST");
-                intent.putExtra("text", spToTxtResult.toString());
+                //Intent intent = new Intent("org.mitre.fluxnotes.NLP_REQUEST");
+                //intent.putExtra("text", spToTxtResult.toString());
                 //startActivity(intent);
-                sendBroadcast(intent);
+                //sendBroadcast(intent);
+                mNLPService.processTranscription(spToTxtResult.toString(), this);
                 currentSessionState = SessionState.PROCESS;
                 break;
                 /*
@@ -268,14 +284,9 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
         }
     }
 
-    private void processingComplete(String NLP_response){
-        // Display NLP response.
-        Intent intent = new Intent(this, DisplayResultsActivity.class);
-        intent.putExtra("text", NLP_response);
-        startActivity(intent);
-
+    public void processingComplete(String response){
         // Capture the NLP result.
-        sessionCapture.captureNlpSample(NLP_response);
+        sessionCapture.captureNlpSample(response);
 
         /* Update display for next session... */
         //Set Status Image
@@ -291,6 +302,11 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
 
         // Processing is complete end session capture.
         sessionCapture.stopCapture();
+
+        // Display NLP response.
+        Intent intent = new Intent(this, DisplayResultsActivity.class);
+        intent.putExtra("text", response);
+        startActivity(intent);
     }
 
     private void startVoiceRecorder() {
