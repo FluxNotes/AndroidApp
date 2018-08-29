@@ -41,7 +41,7 @@ class DisplayResultsActivity : AppCompatActivity() {
 
         val tv = findViewById(R.id.diseaseStatus) as TextView
         if (dataset.getJSONArray("diseaseStatus").length() > 0) {
-            tv.text = dataset.getJSONArray("diseaseStatus").getJSONArray(0).getString(0)
+            tv.text = dataset.getJSONArray("diseaseStatus").getJSONArray(0).getString(0).capitalize()
         } else {
             tv.text = "Unknown"
         }

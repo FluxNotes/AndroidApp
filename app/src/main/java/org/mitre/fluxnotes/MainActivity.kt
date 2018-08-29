@@ -1,14 +1,28 @@
 package org.mitre.fluxnotes
 
+import android.Manifest
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.os.IBinder
 import android.provider.AlarmClock.EXTRA_MESSAGE
+import android.speech.tts.Voice
 import android.support.design.widget.NavigationView
 import android.support.v4.view.GravityCompat
 import android.support.v4.widget.DrawerLayout
+import android.util.Log
 import android.view.MenuItem
 import android.webkit.WebView
+import android.widget.Button
+import android.widget.Toast
+import org.mitre.fluxnotes.fragments.MessageDialogFragment
+import org.mitre.fluxnotes.services.NLPService
+import org.mitre.fluxnotes.services.SpeechService
+import org.mitre.fluxnotes.tools.VoiceRecorder
 
 const val SAMPLE_RESULTS = "{\n" +
         "    \"diseaseStatus\": [\n" +
@@ -84,9 +98,69 @@ const val SAMPLE_RESULTS = "{\n" +
         "    ]\n" +
         "}\n"
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPService.ResponseListener {
 
     private lateinit var mDrawerLayout: DrawerLayout
+
+    private var recording: Boolean = false
+
+    private lateinit var mVoiceRecorder: VoiceRecorder
+    private lateinit var mSpeechService: SpeechService
+    private lateinit var mNLPService: NLPService
+
+    private var capturedText: String = ""
+
+    private val mSpeechServiceListener = object : SpeechService.Listener {
+        override fun onSpeechRecognized(text: String?, isFinal: Boolean) {
+            Log.d("MAIN", "ST text: $text")
+            if (isFinal) {
+                mVoiceRecorder.dismiss()
+            }
+            if (recording && isFinal && !text?.isEmpty()!!) {
+                capturedText += text
+                Log.d("MAIN", "ST FINAL text: $text")
+            }
+        }
+    }
+
+    private var mVoiceCallback = object : VoiceRecorder.Callback(){
+        override fun onVoiceStart() {
+            mSpeechService?.startRecognizing(mVoiceRecorder.sampleRate)
+        }
+
+        override fun onVoice(data: ByteArray?, size: Int) {
+            mSpeechService?.recognize(data, size)
+        }
+
+        override fun onVoiceEnd() {
+            mSpeechService?.finishRecognizing()
+        }
+
+        override fun onVoiceCapture(data: ByteArray?, size: Int, sample_rate: Int) {
+            super.onVoiceCapture(data, size, sample_rate)
+        }
+    }
+
+    private val mSpeechServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            mSpeechService = SpeechService.from(binder)
+            mSpeechService.addListener(mSpeechServiceListener)
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            mSpeechService.removeListener(mSpeechServiceListener)
+        }
+    }
+
+    private val mNLPServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            mNLPService = NLPService.from(binder!!)!!
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            return
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -150,6 +224,51 @@ class MainActivity : AppCompatActivity() {
         val webview = findViewById<WebView>(R.id.webview)
         webview.settings.javaScriptEnabled = true
         webview.loadUrl("https://fluxnotes.org/demo2")
+
+        // button listener
+        val audioButton = findViewById<Button>(R.id.audio_control_button)
+        audioButton.setOnClickListener {
+            recording = !recording
+            if (it !is Button)
+                return@setOnClickListener
+            if (recording) {
+                Log.d("MAIN", "Recording audio")
+                it.text = resources.getText(R.string.end_encounter)
+                val icn = resources.getDrawable(R.drawable.ic_mic_off_black_24dp)
+                icn.setBounds(0, 0, 40, 40)
+                it.setCompoundDrawables(icn, null, null, null)
+                mVoiceRecorder.start()
+            } else {
+                Log.d("MAIN", "Stopping audio recording, processing")
+                Log.d("MAIN", "Captured text: $capturedText")
+                it.text = resources.getText(R.string.begin_encounter)
+                val icn = resources.getDrawable(R.drawable.ic_mic_black_24dp)
+                icn.setBounds(0, 0, 40, 40)
+                it.setCompoundDrawables(icn, null, null, null)
+                mVoiceRecorder.stop()
+                mNLPService.processTranscription(capturedText, this@MainActivity)
+            }
+            Toast.makeText(this@MainActivity, "Recording: $recording", Toast.LENGTH_SHORT).show()
+        }
+
+        // voice recorder
+        mVoiceRecorder = VoiceRecorder(mVoiceCallback)
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        bindService(Intent(this@MainActivity, SpeechService::class.java), mSpeechServiceConnection, Context.BIND_AUTO_CREATE)
+        bindService(Intent(this@MainActivity, NLPService::class.java), mNLPServiceConnection, Context.BIND_AUTO_CREATE)
+
+        // request permissions
+        if (this@MainActivity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            // TODO start voice recorder
+        } else if (this@MainActivity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
+            showPermissionMessageDialog()
+        } else {
+            this@MainActivity.requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 1)
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
@@ -160,5 +279,18 @@ class MainActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    override fun processingComplete(response: String?) {
+        Toast.makeText(this@MainActivity, "SUCCESS", Toast.LENGTH_SHORT).show()
+        Log.d("MAIN", response)
+    }
+
+    override fun onMessageDialogDismissed() {
+        this@MainActivity.requestPermissions(kotlin.arrayOf(Manifest.permission.RECORD_AUDIO), 1)
+    }
+
+    private fun showPermissionMessageDialog() {
+        MessageDialogFragment.newInstance(getString(R.string.permission_message)).show(supportFragmentManager, "message_dialog")
     }
 }

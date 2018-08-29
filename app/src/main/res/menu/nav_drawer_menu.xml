@@ -12,6 +12,6 @@
         <item
             android:id="@+id/nav_display_sample"
             android:title="Display Sample Results"
-            android:icon="@android:drawable/ic_input_add"/>
+            android:icon="@android:drawable/ic_menu_view"/>
     </group>
 </menu>
