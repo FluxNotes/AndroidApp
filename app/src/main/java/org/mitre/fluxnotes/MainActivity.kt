@@ -19,6 +19,7 @@ import android.view.MenuItem
 import android.webkit.WebView
 import android.widget.Button
 import android.widget.Toast
+import org.json.JSONObject
 import org.mitre.fluxnotes.fragments.MessageDialogFragment
 import org.mitre.fluxnotes.services.NLPService
 import org.mitre.fluxnotes.services.SpeechService
@@ -223,7 +224,7 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
 
         val webview = findViewById<WebView>(R.id.webview)
         webview.settings.javaScriptEnabled = true
-        webview.loadUrl("https://fluxnotes.org/demo2")
+        webview.loadUrl("http://10.0.2.2:3000/demo2")
 
         // button listener
         val audioButton = findViewById<Button>(R.id.audio_control_button)
@@ -283,6 +284,12 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
 
     override fun processingComplete(response: String?) {
         Toast.makeText(this@MainActivity, "SUCCESS", Toast.LENGTH_SHORT).show()
+        val results = JSONObject(response)
+        val commands = results.getJSONArray("fluxCommands")
+        val webview = findViewById<WebView>(R.id.webview)
+        for(i in 0..commands.length() - 1) {
+            webview.evaluateJavascript(commands.getString(i)) { value -> Log.d("Main", value) }
+        }
         Log.d("MAIN", response)
     }
 
