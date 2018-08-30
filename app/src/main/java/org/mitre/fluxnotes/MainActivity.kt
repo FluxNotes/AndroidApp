@@ -16,9 +16,9 @@ import android.support.v4.view.GravityCompat
 import android.support.v4.widget.DrawerLayout
 import android.util.Log
 import android.view.MenuItem
+import android.view.View
 import android.webkit.WebView
-import android.widget.Button
-import android.widget.Toast
+import android.widget.*
 import org.json.JSONObject
 import org.mitre.fluxnotes.fragments.MessageDialogFragment
 import org.mitre.fluxnotes.services.NLPService
@@ -105,6 +105,7 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
     private lateinit var mDrawerLayout: DrawerLayout
 
     private var recording: Boolean = false
+    private var processing: Boolean = false
 
     private lateinit var mVoiceRecorder: VoiceRecorder
     private lateinit var mSpeechService: SpeechService
@@ -232,7 +233,7 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
 
         val webview = findViewById<WebView>(R.id.webview)
         webview.settings.javaScriptEnabled = true
-        webview.loadUrl("http://10.0.2.2:3000/demo2")
+        webview.loadUrl("https://fluxnotes.org/demo2")
 
         // button listener
         val audioButton = findViewById<Button>(R.id.audio_control_button)
@@ -243,22 +244,35 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
             if (recording) {
                 Log.d("MAIN", "Recording audio")
                 it.text = resources.getText(R.string.end_encounter)
-                val icn = resources.getDrawable(R.drawable.ic_mic_off_black_24dp)
+                val icn = resources.getDrawable(R.drawable.endbutton)
                 icn.setBounds(0, 0, 40, 40)
                 it.setCompoundDrawables(icn, null, null, null)
+
+                findViewById<TextView>(R.id.status_text).text = "Recording..."
+                findViewById<ImageView>(R.id.status_image).setImageResource(R.mipmap.sound_wave)
+                findViewById<LinearLayout>(R.id.encounter_status).visibility = View.VISIBLE
                 mSessionCapture.startCapture()
                 mVoiceRecorder.start()
+                Toast.makeText(this@MainActivity, "Recording audio", Toast.LENGTH_SHORT).show()
             } else {
                 Log.d("MAIN", "Stopping audio recording, processing")
                 Log.d("MAIN", "Captured text: $capturedText")
                 it.text = resources.getText(R.string.begin_encounter)
-                val icn = resources.getDrawable(R.drawable.ic_mic_black_24dp)
+                val icn = resources.getDrawable(R.drawable.beginbutton)
                 icn.setBounds(0, 0, 40, 40)
                 it.setCompoundDrawables(icn, null, null, null)
                 mVoiceRecorder.stop()
-                mNLPService.processTranscription(capturedText, this@MainActivity)
+                if (capturedText.isEmpty()) {
+                    findViewById<LinearLayout>(R.id.encounter_status).visibility = View.INVISIBLE
+                    Toast.makeText(this@MainActivity, "No audio transcription to process", Toast.LENGTH_SHORT).show()
+                } else {
+                    processing = true
+                    findViewById<TextView>(R.id.status_text).text = "Processing..."
+                    findViewById<ImageView>(R.id.status_image).setImageResource(R.mipmap.cloud)
+                    mNLPService.processTranscription(capturedText, this@MainActivity)
+                    capturedText = ""
+                }
             }
-            Toast.makeText(this@MainActivity, "Recording: $recording", Toast.LENGTH_SHORT).show()
         }
 
         // voice recorder
@@ -282,6 +296,13 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
         }
     }
 
+    override fun onDestroy() {
+        mVoiceRecorder.stop()
+        unbindService(mSpeechServiceConnection)
+        unbindService(mNLPServiceConnection)
+        super.onDestroy()
+    }
+
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
         return when (item?.itemId) {
             android.R.id.home -> {
@@ -293,18 +314,20 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
     }
 
     override fun processingComplete(response: String?) {
-        if(response == null) {
-            Toast.makeText(this@MainActivity, "NO NLP RESPONSE", Toast.LENGTH_SHORT).show()
-        } else {
-            mSessionCapture.captureNlpSample(response)
-            Toast.makeText(this@MainActivity, "SUCCESS", Toast.LENGTH_SHORT).show()
-            val results = JSONObject(response)
-            val commands = results.getJSONArray("fluxCommands")
-            val webview = findViewById<WebView>(R.id.webview)
-            for(i in 0..commands.length() - 1) {
-                webview.evaluateJavascript(commands.getString(i)) { value -> Log.d("Main", value) }
-            }
-            Log.d("MAIN", response)
+
+        processing = false
+        findViewById<LinearLayout>(R.id.encounter_status).visibility = View.INVISIBLE
+        if (response == null) {
+            Toast.makeText(this@MainActivity, "Failed to process audio transcription", Toast.LENGTH_SHORT).show()
+            return
+        }
+        Toast.makeText(this@MainActivity, "NLP processing complete", Toast.LENGTH_SHORT).show()
+        mSessionCapture.captureNlpSample(response)
+        val results = JSONObject(response)
+        val commands = results.getJSONArray("fluxCommands")
+        val webview = findViewById<WebView>(R.id.webview)
+        for(i in 0..commands.length() - 1) {
+            webview.evaluateJavascript(commands.getString(i)) { value -> Log.d("Main", value) }
         }
         mSessionCapture.stopCapture()
     }

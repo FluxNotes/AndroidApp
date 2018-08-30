@@ -10,7 +10,7 @@ import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 
-const val IP = "10.5.8.189"
+const val IP = "10.7.11.20"
 const val URL = "http://$IP:3000/watson"
 const val BOUNDARY = "BHH2P347U89HFSDOIFJQP2"
 const val MULTIPART_FORMDATA = "multipart/form-data;boundary=$BOUNDARY"

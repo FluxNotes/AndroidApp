@@ -349,11 +349,12 @@ public class RecordEncounterActivity extends AppCompatActivity implements Messag
             new SpeechService.Listener() {
                 @Override
                 public void onSpeechRecognized(final String text, final boolean isFinal) {
-
+                    Log.d("RECORD", "ST text: " + text);
                     if (isFinal && mVoiceRecorder != null) {
                         mVoiceRecorder.dismiss();
                     }
                     if (!TextUtils.isEmpty(text)) {
+                        Log.d("RECORD", "ST FINAL text: " + text);
                         if(collectSpToTxt && isFinal) {
                             spToTxtResult.append(text);
                             sessionCapture.captureStoTSample(text);

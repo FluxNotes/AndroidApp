@@ -285,12 +285,14 @@ public class SpeechService extends Service {
                     .setAudioContent(ByteString.copyFrom(data, 0, size))
                     .build());
         }
+
     }
 
     /**
      * Finishes recognizing speech audio.
      */
     public void finishRecognizing() {
+        //Log.d(TAG, "finish recognize start");
         if (mRequestObserver == null) {
             return;
         }
