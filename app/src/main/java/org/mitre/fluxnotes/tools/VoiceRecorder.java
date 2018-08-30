@@ -19,6 +19,7 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 
 /**

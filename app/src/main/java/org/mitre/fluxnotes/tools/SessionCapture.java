@@ -47,7 +47,7 @@ public class SessionCapture {
 
 
     public SessionCapture(Context pc, Activity pa ) {
-        setEnableCapture(true);
+        setEnableCapture(false);
         captureRunning = false;
         audioSampleRate = 0;
         sizeInBytes = 0;

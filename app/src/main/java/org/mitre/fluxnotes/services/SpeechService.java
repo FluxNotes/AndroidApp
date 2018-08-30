@@ -111,6 +111,7 @@ public class SpeechService extends Service {
     private SpeechGrpc.SpeechStub mApi;
     private static Handler mHandler;
 
+    private Object observerLock = new Object();
     private final StreamObserver<StreamingRecognizeResponse> mResponseObserver
             = new StreamObserver<StreamingRecognizeResponse>() {
         @Override
@@ -275,13 +276,15 @@ public class SpeechService extends Service {
      * @param size The number of elements that are actually relevant in the {@code data}.
      */
     public void recognize(byte[] data, int size) {
-        if (mRequestObserver == null) {
-            return;
+        synchronized (observerLock) {
+            if (mRequestObserver == null) {
+                return;
+            }
+            // Call the streaming recognition API
+            mRequestObserver.onNext(StreamingRecognizeRequest.newBuilder()
+                    .setAudioContent(ByteString.copyFrom(data, 0, size))
+                    .build());
         }
-        // Call the streaming recognition API
-        mRequestObserver.onNext(StreamingRecognizeRequest.newBuilder()
-                .setAudioContent(ByteString.copyFrom(data, 0, size))
-                .build());
     }
 
     /**
@@ -291,8 +294,10 @@ public class SpeechService extends Service {
         if (mRequestObserver == null) {
             return;
         }
-        mRequestObserver.onCompleted();
-        mRequestObserver = null;
+        synchronized (observerLock) {
+            mRequestObserver.onCompleted();
+            mRequestObserver = null;
+        }
     }
 
     /**

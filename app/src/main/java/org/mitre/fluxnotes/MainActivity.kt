@@ -23,6 +23,7 @@ import org.json.JSONObject
 import org.mitre.fluxnotes.fragments.MessageDialogFragment
 import org.mitre.fluxnotes.services.NLPService
 import org.mitre.fluxnotes.services.SpeechService
+import org.mitre.fluxnotes.tools.SessionCapture
 import org.mitre.fluxnotes.tools.VoiceRecorder
 
 const val SAMPLE_RESULTS = "{\n" +
@@ -108,6 +109,7 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
     private lateinit var mVoiceRecorder: VoiceRecorder
     private lateinit var mSpeechService: SpeechService
     private lateinit var mNLPService: NLPService
+    private lateinit var mSessionCapture: SessionCapture
 
     private var capturedText: String = ""
 
@@ -119,6 +121,7 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
             }
             if (recording && isFinal && !text?.isEmpty()!!) {
                 capturedText += text
+                mSessionCapture.captureStoTSample(text)
                 Log.d("MAIN", "ST FINAL text: $text")
             }
         }
@@ -138,7 +141,7 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
         }
 
         override fun onVoiceCapture(data: ByteArray?, size: Int, sample_rate: Int) {
-            super.onVoiceCapture(data, size, sample_rate)
+            mSessionCapture?.captureAudioSample(data, size, sample_rate)
         }
     }
 
@@ -203,9 +206,14 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
         navigationView.setNavigationItemSelectedListener { menuItem ->
 
             when (menuItem.itemId) {
-                R.id.nav_record_encounter -> {
-                    val intent = Intent(this, RecordEncounterActivity::class.java)
-                    startActivity(intent)
+                R.id.nav_capture_encounter -> {
+                    if(mSessionCapture?.enableCapture){
+                        mSessionCapture?.enableCapture = false
+                        menuItem.title = getString(R.string.session_capture_disable_title)
+                    } else {
+                        mSessionCapture?.enableCapture = true
+                        menuItem.title = getString(R.string.session_capture_enable_title)
+                    }
                 }
                 R.id.nav_display_sample -> {
                     val intent = Intent(this, DisplayResultsActivity::class.java)
@@ -238,6 +246,7 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
                 val icn = resources.getDrawable(R.drawable.ic_mic_off_black_24dp)
                 icn.setBounds(0, 0, 40, 40)
                 it.setCompoundDrawables(icn, null, null, null)
+                mSessionCapture.startCapture()
                 mVoiceRecorder.start()
             } else {
                 Log.d("MAIN", "Stopping audio recording, processing")
@@ -254,6 +263,7 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
 
         // voice recorder
         mVoiceRecorder = VoiceRecorder(mVoiceCallback)
+        mSessionCapture = SessionCapture(this@MainActivity, this@MainActivity)
     }
 
     override fun onStart() {
@@ -283,14 +293,20 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
     }
 
     override fun processingComplete(response: String?) {
-        Toast.makeText(this@MainActivity, "SUCCESS", Toast.LENGTH_SHORT).show()
-        val results = JSONObject(response)
-        val commands = results.getJSONArray("fluxCommands")
-        val webview = findViewById<WebView>(R.id.webview)
-        for(i in 0..commands.length() - 1) {
-            webview.evaluateJavascript(commands.getString(i)) { value -> Log.d("Main", value) }
+        if(response == null) {
+            Toast.makeText(this@MainActivity, "NO NLP RESPONSE", Toast.LENGTH_SHORT).show()
+        } else {
+            mSessionCapture.captureNlpSample(response)
+            Toast.makeText(this@MainActivity, "SUCCESS", Toast.LENGTH_SHORT).show()
+            val results = JSONObject(response)
+            val commands = results.getJSONArray("fluxCommands")
+            val webview = findViewById<WebView>(R.id.webview)
+            for(i in 0..commands.length() - 1) {
+                webview.evaluateJavascript(commands.getString(i)) { value -> Log.d("Main", value) }
+            }
+            Log.d("MAIN", response)
         }
-        Log.d("MAIN", response)
+        mSessionCapture.stopCapture()
     }
 
     override fun onMessageDialogDismissed() {
