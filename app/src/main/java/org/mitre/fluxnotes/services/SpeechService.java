@@ -332,6 +332,8 @@ public class SpeechService extends Service {
                     .addPhrases("myalgia")
                     .addPhrases("muscle weakness")
                     .addPhrases("muscle pain")
+                    .addPhrases("muscle ache")
+                    .addPhrases("muscle aches")
                     .addPhrases("stable")
                     .addPhrases("progressing")
                     .addPhrases("unchanged")

@@ -113,6 +113,7 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
     private lateinit var mSessionCapture: SessionCapture
 
     private var capturedText: String = ""
+    private var lastText: String = ""
 
     private val mSpeechServiceListener = object : SpeechService.Listener {
         override fun onSpeechRecognized(text: String?, isFinal: Boolean) {
@@ -120,10 +121,15 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
             if (isFinal) {
                 mVoiceRecorder.dismiss()
             }
-            if (recording && isFinal && !text?.isEmpty()!!) {
-                capturedText += text
-                mSessionCapture.captureStoTSample(text)
-                Log.d("MAIN", "ST FINAL text: $text")
+            if (recording && !text?.isEmpty()!!) {
+                if(isFinal) {
+                    lastText = ""
+                    capturedText += text
+                    mSessionCapture.captureStoTSample(text)
+                    Log.d("MAIN", "ST FINAL text: $text")
+                } else {
+                    lastText = text
+                }
             }
         }
     }
@@ -255,6 +261,8 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
                 mVoiceRecorder.start()
                 Toast.makeText(this@MainActivity, "Recording audio", Toast.LENGTH_SHORT).show()
             } else {
+                capturedText += lastText
+                lastText = ""
                 Log.d("MAIN", "Stopping audio recording, processing")
                 Log.d("MAIN", "Captured text: $capturedText")
                 it.text = resources.getText(R.string.begin_encounter)
