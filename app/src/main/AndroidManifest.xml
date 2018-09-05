@@ -21,9 +21,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".RecordEncounterActivity"
-            android:parentActivityName=".MainActivity" />
 
         <activity android:name=".DisplayResultsActivity"
             android:parentActivityName=".MainActivity" />
