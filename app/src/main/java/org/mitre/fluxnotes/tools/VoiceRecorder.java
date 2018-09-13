@@ -15,6 +15,8 @@ package org.mitre.fluxnotes.tools;
  * limitations under the License.
  */
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -40,7 +42,11 @@ public class VoiceRecorder {
     private static final int AMPLITUDE_THRESHOLD = 300; // was 1500
     private static final int SPEECH_TIMEOUT_MILLIS = (1 * 1 * 1000); // was 2 sec
     private static final int MAX_SPEECH_LENGTH_MILLIS = (1 * 55 * 1000); // was 30 sec
-
+    // This is the maximum number of consecutive audio blocks sent to the
+    // Speech to Text service to process. The service will throw an exception
+    // if the rate is much higher than real time, so when catching up after
+    // resetting the streaming connection pace the blocks being sent.
+    private static final int MAX_CONSECUTIVE_BLOCKS_PROCESSED = 4;
 
     public static abstract class Callback {
 
@@ -56,7 +62,9 @@ public class VoiceRecorder {
          * @param data The audio data in {@link AudioFormat#ENCODING_PCM_16BIT}.
          * @param size The size of the actual data in {@code data}.
          */
-        public void onVoice(byte[] data, int size) {
+        public boolean onVoice(byte[] data, int size) {
+            // If there is not installed callback drop the data
+            return true;
         }
 
         /**
@@ -73,13 +81,37 @@ public class VoiceRecorder {
 
     }
 
+    private Object voiceLock = new Object();
+    private boolean running = false;
+    private boolean endIt = false;
     private final Callback mCallback;
 
     private AudioRecord mAudioRecord;
 
     private Thread mThread;
 
-    private byte[] mBuffer;
+    private static int sizeInBytes;
+    public static class audioSampleBlock{
+        int size = 0;
+        byte[] mBuffer = null;
+
+        public int getSize() {
+            return size;
+        }
+
+        public void setSize(int size) {
+            this.size = size;
+        }
+
+        public byte[] getmBuffer() {
+            return mBuffer;
+        }
+
+        public void setmBuffer(byte[] mBuffer) {
+            this.mBuffer = mBuffer;
+        }
+    }
+    private BlockingQueue<audioSampleBlock> mBufferQueue = new LinkedBlockingQueue<>();
 
     private final Object mLock = new Object();
 
@@ -87,7 +119,7 @@ public class VoiceRecorder {
     private long mLastVoiceHeardMillis = Long.MAX_VALUE;
 
     /** The timestamp when the current voice is started. */
-    private long mVoiceStartedMillis;
+    private long mVoiceStartedMillis = Long.MAX_VALUE;
 
     public VoiceRecorder(@NonNull Callback callback) {
         mCallback = callback;
@@ -128,7 +160,7 @@ public class VoiceRecorder {
                 mAudioRecord.release();
                 mAudioRecord = null;
             }
-            mBuffer = null;
+            mBufferQueue.clear();
         }
     }
 
@@ -136,11 +168,25 @@ public class VoiceRecorder {
      * Dismisses the currently ongoing utterance.
      */
     public void dismiss() {
-        if (mLastVoiceHeardMillis != Long.MAX_VALUE) {
-            mLastVoiceHeardMillis = Long.MAX_VALUE;
-            mCallback.onVoiceEnd();
+        endIt = true;
+        end();
+    }
+
+    public void end() {
+        synchronized (voiceLock) {
+            if (running && endIt) {
+                if (System.currentTimeMillis() - mVoiceStartedMillis > 1000) {
+                    //Log.d("SPEECH: Voice Recorder:", "END!");
+                    mLastVoiceHeardMillis = Long.MAX_VALUE;
+                    mVoiceStartedMillis = Long.MAX_VALUE;
+                    mCallback.onVoiceEnd();
+                    running = false;
+                }
+                endIt = false;
+            }
         }
     }
+
 
     /**
      * Retrieves the sample rate currently used to record audio.
@@ -162,14 +208,14 @@ public class VoiceRecorder {
      */
     private AudioRecord createAudioRecord() {
         for (int sampleRate : SAMPLE_RATE_CANDIDATES) {
-            final int sizeInBytes = AudioRecord.getMinBufferSize(sampleRate, CHANNEL, ENCODING);
+            sizeInBytes = AudioRecord.getMinBufferSize(sampleRate, CHANNEL, ENCODING);
             if (sizeInBytes == AudioRecord.ERROR_BAD_VALUE) {
+                sizeInBytes = 0;
                 continue;
             }
             final AudioRecord audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,
                     sampleRate, CHANNEL, ENCODING, sizeInBytes);
             if (audioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
-                mBuffer = new byte[sizeInBytes];
                 return audioRecord;
             } else {
                 audioRecord.release();
@@ -191,32 +237,65 @@ public class VoiceRecorder {
                     if (Thread.currentThread().isInterrupted()) {
                         break;
                     }
-                    final int size = mAudioRecord.read(mBuffer, 0, mBuffer.length);
+
+                    audioSampleBlock sampleBlock = new audioSampleBlock();
+                    sampleBlock.setmBuffer(new byte[sizeInBytes]);
+                    final int size = mAudioRecord.read(sampleBlock.getmBuffer(), 0, sizeInBytes);
+                    sampleBlock.setSize(size);
                     final long now = System.currentTimeMillis();
-                    mCallback.onVoiceCapture(mBuffer, mBuffer.length, getSampleRate());
-                    if (isHearingVoice(mBuffer, size)) {
-                        if (mLastVoiceHeardMillis == Long.MAX_VALUE) {
+                    try {
+                        mBufferQueue.put(sampleBlock);
+                    } catch (Exception ex){
+                        Log.e("SPEECH: Voice Recorder:", "mBufferQueue Put Failed.", ex);
+                    }
+
+                    mCallback.onVoiceCapture(sampleBlock.getmBuffer(), sampleBlock.getSize(), getSampleRate());
+                    if (isHearingVoice(sampleBlock.getmBuffer(), sampleBlock.getSize())) {
+                        if (mVoiceStartedMillis == Long.MAX_VALUE) {
                             mVoiceStartedMillis = now;
                             mCallback.onVoiceStart();
+                            running = true;
                         }
-                        mCallback.onVoice(mBuffer, size);
-                        mLastVoiceHeardMillis = now;
+                        int cnt = MAX_CONSECUTIVE_BLOCKS_PROCESSED;
+                        while(!mBufferQueue.isEmpty() && cnt-->0){
+                            try {
+                                sampleBlock = mBufferQueue.peek();
+                                if(mCallback.onVoice(sampleBlock.getmBuffer(), sampleBlock.getSize())) {
+                                    mLastVoiceHeardMillis = now;
+                                    mBufferQueue.poll();
+                                }
+                                else{
+                                    //Log.d("SPEECH: Voice Recorder:", "Buffered Samples:" + mBufferQueue.size());
+                                    break;
+                                }
+                            } catch (Exception ex){
+                                Log.e("SPEECH: Voice Recorder:", "mBufferQueue Take Failed.", ex);
+                            }
+                        }
                         if (now - mVoiceStartedMillis > MAX_SPEECH_LENGTH_MILLIS) {
-                            end();
+                            endIt = true;
                         }
                     } else if (mLastVoiceHeardMillis != Long.MAX_VALUE) {
-                        mCallback.onVoice(mBuffer, size);
+                        while(!mBufferQueue.isEmpty()){
+                            try {
+                                sampleBlock = mBufferQueue.peek();
+                                if(mCallback.onVoice(sampleBlock.getmBuffer(), sampleBlock.getSize()))
+                                    mBufferQueue.poll();
+                                else{
+                                    //Log.d("SPEECH: Voice Recorder:", "End Buffered Samples:" + mBufferQueue.size());
+                                    break;
+                                }
+                            } catch (Exception ex){
+                                Log.e("SPEECH: Voice Recorder:", "mBufferQueue Take Failed.", ex);
+                            }
+                        }
                         if (now - mLastVoiceHeardMillis > SPEECH_TIMEOUT_MILLIS) {
-                            end();
+                            endIt = true;
                         }
                     }
+                    end();
                 }
             }
-        }
-
-        private void end() {
-            mLastVoiceHeardMillis = Long.MAX_VALUE;
-            mCallback.onVoiceEnd();
         }
 
         private boolean isHearingVoice(byte[] buffer, int size) {

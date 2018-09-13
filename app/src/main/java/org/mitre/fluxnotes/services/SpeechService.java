@@ -247,25 +247,28 @@ public class SpeechService extends Service {
      * @param sampleRate The sample rate of the audio.
      */
     public void startRecognizing(int sampleRate) {
-        if (mApi == null) {
-            Log.w(TAG, "API not ready. Ignoring the request.");
-            return;
-        }
-        // Configure the API
-        mRequestObserver = mApi.streamingRecognize(mResponseObserver);
-        mRequestObserver.onNext(StreamingRecognizeRequest.newBuilder()
-                .setStreamingConfig(StreamingRecognitionConfig.newBuilder()
-                        .setConfig(RecognitionConfig.newBuilder()
-                                .setLanguageCode(getDefaultLanguageCode())
-                                .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16)
-                                .setSampleRateHertz(sampleRate)
-                                .setModel("video")
-                                .setEnableAutomaticPunctuation(true)
+        if(mApi != null) {
+            synchronized (observerLock) {
+                // Configure the API
+                mRequestObserver = mApi.streamingRecognize(mResponseObserver);
+                mRequestObserver.onNext(StreamingRecognizeRequest.newBuilder()
+                        .setStreamingConfig(StreamingRecognitionConfig.newBuilder()
+                                .setConfig(RecognitionConfig.newBuilder()
+                                        .setLanguageCode(getDefaultLanguageCode())
+                                        .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16)
+                                        .setSampleRateHertz(sampleRate)
+                                        .setModel("video")
+                                        .setEnableAutomaticPunctuation(true)
+                                        .build())
+                                .setInterimResults(true)
+                                .setSingleUtterance(false)
                                 .build())
-                        .setInterimResults(true)
-                        .setSingleUtterance(false)
-                        .build())
-                .build());
+                        .build());
+            }
+        }
+        else{
+            Log.w(TAG, "API not ready. Ignoring the request.");
+        }
     }
 
     /**
@@ -275,30 +278,29 @@ public class SpeechService extends Service {
      * @param data The audio data.
      * @param size The number of elements that are actually relevant in the {@code data}.
      */
-    public void recognize(byte[] data, int size) {
+    public boolean recognize(byte[] data, int size) {
+        boolean rval = false;
         synchronized (observerLock) {
-            if (mRequestObserver == null) {
-                return;
+            if (mRequestObserver != null) {
+                // Call the streaming recognition API
+                mRequestObserver.onNext(StreamingRecognizeRequest.newBuilder()
+                        .setAudioContent(ByteString.copyFrom(data, 0, size))
+                        .build());
+                rval = true;
             }
-            // Call the streaming recognition API
-            mRequestObserver.onNext(StreamingRecognizeRequest.newBuilder()
-                    .setAudioContent(ByteString.copyFrom(data, 0, size))
-                    .build());
         }
-
+        return rval;
     }
 
     /**
      * Finishes recognizing speech audio.
      */
     public void finishRecognizing() {
-        //Log.d(TAG, "finish recognize start");
-        if (mRequestObserver == null) {
-            return;
-        }
         synchronized (observerLock) {
-            mRequestObserver.onCompleted();
-            mRequestObserver = null;
+            if (mRequestObserver != null) {
+                mRequestObserver.onCompleted();
+                mRequestObserver = null;
+            }
         }
     }
 

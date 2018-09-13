@@ -136,14 +136,16 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
 
     private var mVoiceCallback = object : VoiceRecorder.Callback(){
         override fun onVoiceStart() {
+            //Log.d("MAIN", "VOICE START!")
             mSpeechService?.startRecognizing(mVoiceRecorder.sampleRate)
         }
 
-        override fun onVoice(data: ByteArray?, size: Int) {
-            mSpeechService?.recognize(data, size)
+        override fun onVoice(data: ByteArray?, size: Int): Boolean {
+            return mSpeechService?.recognize(data, size)
         }
 
         override fun onVoiceEnd() {
+            //Log.d("MAIN", "VOICE STOP!")
             mSpeechService?.finishRecognizing()
         }
 
