@@ -6,5 +6,23 @@
     <string name="permission_message">This app needs to record audio and recognize your speech.</string>
     <string name="begin_encounter">Begin Encounter</string>
     <string name="end_encounter">End Encounter</string>
+    <string name="title_activity_settings">Settings</string>
+
+    <!-- Strings related to Settings -->
+
+    <!-- General settings -->
+    <string name="pref_header_general">General</string>
+
+    <string name="pref_title_session_capture">Enable Session Capture</string>
+    <string name="pref_session_capture_summary">Collect Audio, Speech to Text Translation and NLP
+        results for session encounter
+    </string>
+
+    <!-- NLP settings -->
+    <string name="pref_header_nlp">NLP Service</string>
+    <string name="pref_nlp_service_ipaddr">18.211.105.255</string>
+    <string name="pref_nlp_service_ipaddr_display_name">IP Address</string>
+    <string name="pref_nlp_service_port">3000</string>
+    <string name="pref_nlp_service_port_display_name">Port Number</string>
 
 </resources>

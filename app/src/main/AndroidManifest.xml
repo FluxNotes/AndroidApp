@@ -7,7 +7,6 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
-
     <application
         android:allowBackup="true"
         android:icon="@mipmap/logo"
@@ -21,8 +20,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity android:name=".DisplayResultsActivity"
+        <activity
+            android:name=".DisplayResultsActivity"
             android:parentActivityName=".MainActivity" />
 
         <receiver
@@ -39,6 +38,10 @@
         <service
             android:name=".services.NLPService"
             android:enabled="true" />
+
+        <activity
+            android:name=".SettingsActivity"
+            android:label="@string/title_activity_settings"></activity>
     </application>
 
 </manifest>

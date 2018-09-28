@@ -1,0 +1,27 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- A 'parent' preference, which enables/disables child preferences (below)
+         when checked/unchecked. -->
+    <EditTextPreference
+        android:capitalize="words"
+        android:defaultValue="@string/pref_nlp_service_ipaddr"
+        android:inputType="textCapWords"
+        android:key="nlp_service_ip"
+        android:maxLines="1"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="@string/pref_nlp_service_ipaddr_display_name"
+        android:summary=""/>
+
+    <EditTextPreference
+        android:capitalize="words"
+        android:defaultValue="@string/pref_nlp_service_port"
+        android:inputType="textCapWords"
+        android:key="nlp_service_port"
+        android:maxLines="1"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="@string/pref_nlp_service_port_display_name"
+        android:summary="" />
+
+</PreferenceScreen>

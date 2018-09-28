@@ -9,8 +9,6 @@ import android.content.pm.PackageManager
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.os.IBinder
-import android.provider.AlarmClock.EXTRA_MESSAGE
-import android.speech.tts.Voice
 import android.support.design.widget.NavigationView
 import android.support.v4.view.GravityCompat
 import android.support.v4.widget.DrawerLayout
@@ -215,18 +213,13 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
         navigationView.setNavigationItemSelectedListener { menuItem ->
 
             when (menuItem.itemId) {
-                R.id.nav_capture_encounter -> {
-                    if(mSessionCapture?.enableCapture){
-                        mSessionCapture?.enableCapture = false
-                        menuItem.title = getString(R.string.session_capture_disable_title)
-                    } else {
-                        mSessionCapture?.enableCapture = true
-                        menuItem.title = getString(R.string.session_capture_enable_title)
-                    }
-                }
                 R.id.nav_display_sample -> {
                     val intent = Intent(this, DisplayResultsActivity::class.java)
                     intent.putExtra("text", SAMPLE_RESULTS)
+                    startActivity(intent)
+                }
+                R.id.nav_settings_menu -> {
+                    val intent = Intent(this, SettingsActivity::class.java)
                     startActivity(intent)
                 }
             }

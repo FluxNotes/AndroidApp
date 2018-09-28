@@ -2,7 +2,9 @@ package org.mitre.fluxnotes.tools;
 
 import android.Manifest;
 import android.app.Activity;
+import android.preference.PreferenceManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -23,9 +25,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 
+
 public class SessionCapture {
 
-    private boolean capture;
     private boolean captureRunning;
     private static final String SESSION_CAPTURE_FOLDER = "Session";
     private static final String AUDIO_TEMP_FILE = "record_temp.raw";
@@ -37,6 +39,8 @@ public class SessionCapture {
     private int sizeInBytes;
     private int audioSampleRate;
     private long byteCount;
+    private Context mContext;
+    private SharedPreferences prefs;
 
     private File workingpath;
     private File sessionDir;
@@ -47,7 +51,7 @@ public class SessionCapture {
 
 
     public SessionCapture(Context pc, Activity pa ) {
-        setEnableCapture(false);
+        mContext = pc;
         captureRunning = false;
         audioSampleRate = 0;
         sizeInBytes = 0;
@@ -113,13 +117,12 @@ public class SessionCapture {
         }
     }
 
-    public void setEnableCapture(boolean capture){
-        this.capture = capture;
-        Log.d("SPEECH Capture", "capture:" + capture);
-    }
-
     public boolean getEnableCapture(){
-        return capture;
+        boolean rval;
+        prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+        rval = prefs.getBoolean("session_capture_switch",false);
+        Log.d("SPEECH Capture", "capture:" + rval);
+        return rval;
     }
 
     public void startCapture(){
@@ -127,7 +130,7 @@ public class SessionCapture {
         // Start capturing create an input stream to a file
         // and push whatever samples come in.
         Log.d("SPEECH Capture", " START " + "CR: " + captureRunning);
-        if(!captureRunning && capture){
+        if(!captureRunning && getEnableCapture()){
 
             // Create files to store the session samples
             workingpath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);

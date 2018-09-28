@@ -2,19 +2,19 @@ package org.mitre.fluxnotes.services
 
 import android.app.Service
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Binder
 import android.os.IBinder
+import android.preference.PreferenceManager
 import android.util.Log
 import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 
-const val IP = "10.7.6.121"
-const val PORT = "3000"
-const val URL = "http://$IP:$PORT/watson"
 const val BOUNDARY = "BHH2P347U89HFSDOIFJQP2"
 const val MULTIPART_FORMDATA = "multipart/form-data;boundary=$BOUNDARY"
+private lateinit var prefs: SharedPreferences
 
 class NLPService : Service() {
 
@@ -30,17 +30,23 @@ class NLPService : Service() {
         }
     }
 
+    var mIpAddr = "18.211.105.255"
+    var mPort = "3000"
+
     private val mBinder = NLPBinder()
 
     override fun onBind(intent: Intent): IBinder {
+        prefs = PreferenceManager.getDefaultSharedPreferences(this)
         return mBinder
     }
 
     fun processTranscription(text: String, listener: ResponseListener) {
         val queue = Volley.newRequestQueue(this)
-
-        val request = object : StringRequest(Request.Method.POST, URL,
+        getNLPServiceConfig()
+        val uRL = "http://$mIpAddr:$mPort/watson"
+        val request = object : StringRequest(Request.Method.POST, uRL,
                 Response.Listener<String> { response ->
+                    Log.d(TAG, uRL)
                     Log.d(TAG, "SUCCESS")
                     Log.d(TAG, response)
 
@@ -91,4 +97,11 @@ class NLPService : Service() {
         fun processingComplete(response: String?)
     }
 
+    fun getNLPServiceConfig(){
+       mIpAddr = prefs.getString("nlp_service_ip", "18.211.105.255")
+       mPort = prefs.getString("nlp_service_port", "3000")
+
+       Log.d(TAG, "Service IP:$mIpAddr Service Port:$mPort")
+
+    }
 }
