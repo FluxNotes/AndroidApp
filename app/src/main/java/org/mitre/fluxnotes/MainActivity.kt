@@ -20,6 +20,7 @@ import android.view.View
 import android.webkit.WebView
 import android.widget.*
 import org.json.JSONObject
+import org.mitre.fluxnotes.data.session.SessionListActivity
 import org.mitre.fluxnotes.fragments.MessageDialogFragment
 import org.mitre.fluxnotes.services.NLPService
 import org.mitre.fluxnotes.services.SpeechService
@@ -229,6 +230,10 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
                     intent.putExtra("text", SAMPLE_RESULTS)
                     startActivity(intent)
                 }
+                R.id.nav_view_sessions -> {
+                    val intent = Intent(this, SessionListActivity::class.java)
+                    startActivity(intent)
+                }
             }
 
             menuItem.isChecked = true
@@ -329,6 +334,7 @@ class MainActivity : AppCompatActivity(), MessageDialogFragment.Listener, NLPSer
         findViewById<LinearLayout>(R.id.encounter_status).visibility = View.INVISIBLE
         if (response == null) {
             Toast.makeText(this@MainActivity, "Failed to process audio transcription", Toast.LENGTH_SHORT).show()
+            mSessionCapture.stopCapture()
             return
         }
         Toast.makeText(this@MainActivity, "NLP processing complete", Toast.LENGTH_SHORT).show()

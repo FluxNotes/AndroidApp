@@ -11,9 +11,11 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
+import org.mitre.fluxnotes.data.session.Session;
+import org.mitre.fluxnotes.data.session.SessionRepository;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.zip.*;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -27,7 +29,7 @@ public class SessionCapture {
 
     private boolean capture;
     private boolean captureRunning;
-    private static final String SESSION_CAPTURE_FOLDER = "Session";
+    private static final String SESSION_CAPTURE_FOLDER = "Sessions";
     private static final String AUDIO_TEMP_FILE = "record_temp.raw";
     private static final String AUDIO_CAPTURE_FILE = "audio.wav";
     private static final String SPEECH_TO_TEXT_CAPTURE_FILE = "speechToText.txt";
@@ -45,12 +47,17 @@ public class SessionCapture {
     private File sToTFile;
     private File nlpFile;
 
+    private SessionRepository mSessionRepository;
+    private Session mSession;
+
+    public final String TAG = "SessionCapture";
 
     public SessionCapture(Context pc, Activity pa ) {
         setEnableCapture(false);
         captureRunning = false;
         audioSampleRate = 0;
         sizeInBytes = 0;
+        mSessionRepository = new SessionRepository(pa.getApplication());
 
         if (ContextCompat.checkSelfPermission(pc, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -70,12 +77,16 @@ public class SessionCapture {
 
     public void captureAudioSample(byte[] data, int size, int sampleRate){
         audioSampleRate = sampleRate;
+        mSession.setSampleRate(sampleRate);
+        mSession.setSize(mSession.getSize() + size);
+
         this.sizeInBytes = AudioRecord.getMinBufferSize(audioSampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         if(captureRunning && sampleRate != 0){
             try {
                 OutputStream os = new FileOutputStream(tempfile, (tempfile.length()>0));
                 os.write(data, 0, size);
                 byteCount+=size;
+                mSession.setByteSize(byteCount);
 
             } catch (Exception ex) {
                 Log.d("SPEECH Audio Capture ", ex.getMessage());
@@ -91,6 +102,7 @@ public class SessionCapture {
                 BufferedWriter bw = new BufferedWriter( fw );
                 bw.write( sample );
                 bw.close( );
+                mSession.setNlpResults(sample);
             } catch( IOException e ) {
                 Log.d("SPEECH NLP Capture ", e.getMessage());
                 e.printStackTrace( );
@@ -106,6 +118,7 @@ public class SessionCapture {
                 BufferedWriter bw = new BufferedWriter( fw );
                 bw.write( sample );
                 bw.close( );
+                mSession.setTranscriptionText(sample);
             } catch( IOException e ) {
                 Log.d("SPEECH S2T Capture ", e.getMessage());
                 e.printStackTrace( );
@@ -124,6 +137,7 @@ public class SessionCapture {
 
     public void startCapture(){
         byteCount = 0;
+        mSession = new Session();
         // Start capturing create an input stream to a file
         // and push whatever samples come in.
         Log.d("SPEECH Capture", " START " + "CR: " + captureRunning);
@@ -146,15 +160,15 @@ public class SessionCapture {
                     Log.d("SPEECH Capture", " START-> Created " + sessionDir.getAbsolutePath());}
             }
             try {
-                audioFile = new File(sessionDir.getAbsolutePath() + "/" + AUDIO_CAPTURE_FILE);
+                audioFile = new File(sessionDir.getAbsolutePath() + "/" + mSession.getTimestamp() + "-" + AUDIO_CAPTURE_FILE);
             }catch (Exception e1){
                 Log.d("SPEECH Capture", " START-> Error Creating " + audioFile.getAbsolutePath() + "  " + e1.getMessage());}
             try{
-                sToTFile = new File(sessionDir.getAbsolutePath() + "/" + SPEECH_TO_TEXT_CAPTURE_FILE);
+                sToTFile = new File(sessionDir.getAbsolutePath() + "/" + mSession.getTimestamp() + "-" + SPEECH_TO_TEXT_CAPTURE_FILE);
             }catch (Exception e2){
                 Log.d("SPEECH Capture", " START-> Error Creating " + sToTFile.getAbsolutePath() + "  " + e2.getMessage());}
             try{
-                nlpFile = new File(sessionDir.getAbsolutePath() + "/" + NLP_CAPTURE_FILE);
+                nlpFile = new File(sessionDir.getAbsolutePath() + "/" + mSession.getTimestamp() + "-" + NLP_CAPTURE_FILE);
             }catch (Exception e3){
                 Log.d("SPEECH Capture", " START-> Error Creating " + nlpFile.getAbsolutePath() + "  " + e3.getMessage());}
             try{
@@ -176,6 +190,10 @@ public class SessionCapture {
             Log.d("SPEECH Capture", " START-> Deleted " + tempfile.getAbsolutePath());
             tempfile.delete();
 
+            mSession.setAudioFilePath(audioFile.getAbsolutePath());
+            mSessionRepository.insert(mSession);
+            Log.d(TAG, "audioFile: " + audioFile.getAbsolutePath());
+
             // Zip up the session and store it.
             if(sessionDir.exists()) {
                 ZipHelper sessionFile = new ZipHelper();
@@ -184,7 +202,7 @@ public class SessionCapture {
                 } catch (Exception e){
                     Log.e("SPEECH","Error creating Session Zip. " + e.getMessage());
                 }
-                deleteFolder(sessionDir);
+                //deleteFolder(sessionDir);
             }
         }
     }
@@ -302,57 +320,4 @@ public class SessionCapture {
         return (workingpath.getAbsolutePath() + "/Session_" + ft.format(dNow) + ".zip");
     }
 }
-
-class ZipHelper
-{
-    public void zipDir(String dirName, String nameZipFile) throws IOException {
-        Log.d("SPEECH", "Zipping up "+dirName+". Placing it in "+nameZipFile);
-        ZipOutputStream zip = null;
-        FileOutputStream fW = null;
-        fW = new FileOutputStream(nameZipFile);
-        zip = new ZipOutputStream(fW);
-        addFolderToZip("", dirName, zip);
-        zip.close();
-        fW.close();
-    }
-
-    private void addFolderToZip(String path, String srcFolder, ZipOutputStream zip) throws IOException {
-        File folder = new File(srcFolder);
-        if (folder.list().length == 0) {
-            addFileToZip(path , srcFolder, zip, true);
-        }
-        else {
-            for (String fileName : folder.list()) {
-                if (path.equals("")) {
-                    addFileToZip(folder.getName(), srcFolder + "/" + fileName, zip, false);
-                }
-                else {
-                    addFileToZip(path + "/" + folder.getName(), srcFolder + "/" + fileName, zip, false);
-                }
-            }
-        }
-    }
-
-    private void addFileToZip(String path, String srcFile, ZipOutputStream zip, boolean flag) throws IOException {
-        File folder = new File(srcFile);
-        if (flag) {
-            zip.putNextEntry(new ZipEntry(path + "/" +folder.getName() + "/"));
-        }
-        else {
-            if (folder.isDirectory()) {
-                addFolderToZip(path, srcFile, zip);
-            }
-            else {
-                byte[] buf = new byte[1024];
-                int len;
-                FileInputStream in = new FileInputStream(srcFile);
-                zip.putNextEntry(new ZipEntry(path + "/" + folder.getName()));
-                while ((len = in.read(buf)) > 0) {
-                    zip.write(buf, 0, len);
-                }
-            }
-        }
-    }
-}
-
 

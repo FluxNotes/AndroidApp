@@ -7,4 +7,5 @@
     <string name="begin_encounter">Begin Encounter</string>
     <string name="end_encounter">End Encounter</string>
 
+    <string name="menu_view_sessions">View Recorded Sessions</string>
 </resources>

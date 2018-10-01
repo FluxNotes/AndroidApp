@@ -17,5 +17,10 @@
             android:id="@+id/nav_display_sample"
             android:title="Display Sample Results"
             android:icon="@android:drawable/ic_menu_view"/>
+
+        <item
+            android:id="@+id/nav_view_sessions"
+            android:title="@string/menu_view_sessions"
+            android:icon="@android:drawable/ic_menu_view"/>
     </group>
 </menu>
